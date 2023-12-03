@@ -1,5 +1,4 @@
 import io.github.bonigarcia.wdm.WebDriverManager;
-import org.json.JSONArray;
 import org.json.JSONObject;
 import org.json.JSONTokener;
 import org.openqa.selenium.By;
@@ -32,13 +31,13 @@ public class AdUnitTest {
 
     @Test
     public void testAdUnit() throws IOException, org.json.simple.parser.ParseException {
-
         driver.get("https://www.timesnownews.com/");
         List<WebElement> listAdUnit = waitForElementsToBePresent(By.cssSelector("div[data-adunit]"), Duration.ofSeconds(700));
         int countSize = listAdUnit.size();
         System.out.println("Total Data-Ad: " + countSize);
-        List<String> webPageAdUnits = new ArrayList<>();
 
+       
+        List<String> webPageAdUnits = new ArrayList<>();
         for (int i = 0; i < countSize; i++) {
             String divAd = listAdUnit.get(i).getAttribute("data-adunit");
             if (divAd != null && !divAd.isEmpty()) {
@@ -46,23 +45,36 @@ public class AdUnitTest {
                 webPageAdUnits.add(divAd);
             }
         }
+
         System.out.println("--------------------------------------------------------------------------------------------");
         JSONTokener jsonTokener = new JSONTokener(new FileReader("./src/test/resources/TnAd.json"));
         JSONObject jsonObject = new JSONObject(jsonTokener);
         JSONObject ads = jsonObject.getJSONObject("response").getJSONObject("ads");
-        List<String> unmatchedAdUnits = new ArrayList<>(webPageAdUnits);
-        unmatchedAdUnits.removeAll(ads.keySet());
-//        String[] excludedValues = {"btf_5", "atf", "btf_4", "btf_3", "btf", "atf_1", "multi_4", "multi_Inf", "multi_2", "multi_3", "btf_2", "multi_1"};
-//        unmatchedAdUnits.removeAll(List.of(excludedValues));
+
+        
+        List<String> adCodesFromJSON = new ArrayList<>();
         for (String adUnitKey : ads.keySet()) {
             JSONObject adUnit = ads.getJSONObject(adUnitKey);
             String adCode = adUnit.getString("adCode");
-            if (!webPageAdUnits.contains(adUnitKey)) {
-                unmatchedAdUnits.add(adUnitKey);
-            }
-            System.out.println("Ad Code: " + adCode);
+            adCodesFromJSON.add(adCode);
         }
-        System.out.println("--------------------------------------------------------------------------------------------");
+
+       
+        List<String> unmatchedAdUnits = new ArrayList<>();
+        for (String adUnit : webPageAdUnits) {
+            boolean matched = false;
+            for (String adCode : adCodesFromJSON) {
+                if (adCode.contains(adUnit)) {
+                    matched = true;
+                    break;
+                }
+            }
+            if (!matched) {
+                unmatchedAdUnits.add(adUnit);
+            }
+        }
+
+       
         System.out.println("Unmatched Ad Units:");
         for (String unmatchedAdUnit : unmatchedAdUnits) {
             System.out.println(unmatchedAdUnit);
@@ -71,7 +83,6 @@ public class AdUnitTest {
 
     @AfterMethod
     public void tearDown() {
-        driver.close();
         driver.quit();
     }
 
@@ -80,5 +91,3 @@ public class AdUnitTest {
         return wait.until(ExpectedConditions.presenceOfAllElementsLocatedBy(locator));
     }
 }
-
-
